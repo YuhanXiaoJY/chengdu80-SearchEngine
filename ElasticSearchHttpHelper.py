@@ -61,18 +61,24 @@ class ElasticSearchHttpHelper:
             new_line = ""
             for i in range(line_len):
                 new_line = new_line + line[i]
-            print(re.findall(r"\"_id\" : \"(.+?)\"", new_line))
+            my_list = re.findall(r"\"_id\" : \"(.+?)\"", new_line)
+            print(my_list)
+            return my_list
         else:
             line = self.match_topic(query, index_name)
             line_len = len(line)
             new_line = ""
             for i in range(line_len):
                 new_line = new_line + line[i]
-            print(re.findall(r"\"_id\" : \"(.+?)\"", new_line))
+            my_list = re.findall(r"\"_id\" : \"(.+?)\"", new_line)
+            print(my_list)
+            return my_list
 
 
     def match_topic(self, query, index_name):
-        params = '{"query": {"bool": {"should": [{"match": {"name": {"query": "' + query + '","boost": 2 }}},{"match": {"EXPERTISE": {"query": "'+ query + '","boost": 10 }}},{"match": {"homepage": {"query": "' + query + '","boost": 2 }}}]}},"_source":["author_id"],"size": 20}'
+        # params = '{"query": {"bool": {"should": [{"match": {"name": {"query": "' + query + '","boost": 2 }}},{"match": {"EXPERTISE": {"query": "' + query + '","boost": 10 }}},{"match": {"homepage": {"query": "' + query + '", "boost": 2}}}]}}, "_source": ["author_id"], "size": 20}'
+        # sorted by citation_cnt
+        params = '{"query": {"bool": {"should": [{"match": {"name": {"query": \"%s\","boost": 2 }}},{"match": {"EXPERTISE": {"query": \"%s\","boost": 10 }}},{"match": {"homepage": {"query": \"%s\", "boost": 2}}}]}}, "_source": ["author_id"], "size": 20, "sort":{"citation_cnt" : {"order" : "desc"}}}' % (query, query, query)
         cmd = 'curl -H Content-Type:application/json -XGET \'' + self.IP + index_name + '/_search?pretty\'' + ' -d \'' + params + '\''
         print(cmd)
         return os.popen(cmd).readlines()
@@ -81,7 +87,9 @@ class ElasticSearchHttpHelper:
     def match_name(self, query, index_name):
         # {"query": {"bool": {"should": [{"match": {"name": {"query": "str","boost": 2 }}}]}}}
         # curl -X GET "localhost:9200/trial/doc" -H 'Content-Type: application/json' -d
+        # not sorted by citation_cnt
         params = '{"query": {"bool": {"should": [{"match": {"name": {"query": "' + query + '","boost": 100 }}}]}},"_source":["author_id"],"size": 20}'
+        # params = '{"query":{"function_score": {"query": {"should": [{"match": {"name": {"query": %s,"boost": 100 }}}]},"field_value_factor": {"field": "citation_cnt","modifier": "log1p","factor": 0.1},"boost_mode": "sum","max_boost": 1 }},"_source":["author_id"],"size": 20}' % (query)
         cmd = 'curl -H Content-Type:application/json -XGET \'' + self.IP + index_name + '/_search?pretty\'' + ' -d \'' + params + '\''
         print(cmd)
         return os.popen(cmd).readlines()
@@ -160,7 +168,7 @@ if __name__ == "__main__":
     manager = ElasticSearchHttpHelper()
     # manager.PUT_file("chengdu80", "researcher", filename)     # upload data
     # manager.http_delete("chengdu80", "")      # delete data
-    manager.get_researcher(True, True, "lee", "chengdu80")
+    manager.get_researcher(True, True, "Lee", "chengdu80")
     # manager.http_get_index_info("chengdu80", "researcher", str(2654673094))
 
     # str_value = '{"webpage_url": "1", "image_url": "2", "anchor_text": "3", "EXPERTISE": ["clinical", "psychology", "physical"], "msa_papers": 4}'
